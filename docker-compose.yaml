@@ -1,0 +1,64 @@
+version: '3.7'
+
+services:
+
+  zipkin-server:
+    image: openzipkin/zipkin:2.23
+    mem_limit: 500m
+    ports:
+      - "9411:9411"
+    networks:
+      - currency-network
+
+  naming-server:
+    image: ashking007/naming-server:1.0.0
+    container_name: naming-server
+    mem_limit: 1000m
+    ports:
+      - "8761:8761"
+    networks:
+      - currency-network
+
+  api-gateway:
+    image: ashking007/api-gateway:1.0.0
+    mem_limit: 1000m
+    ports:
+      - "8765:8765"
+    networks:
+      - currency-network
+    depends_on:
+      - naming-server
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
+  
+  currency-exchange:
+    image: ashking007/curr-exchange-ms:1.0.0
+    mem_limit: 1000m
+    ports:
+      - "8000:8000"
+    networks:
+      - currency-network
+    depends_on:
+      - naming-server
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      EUREKA.INSTANCE.PREFERIPADDRESS: true
+      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
+  
+  currency-conversion:
+    image: ashking007/curr-conversion-ms:1.0.0
+    mem_limit: 1000m
+    ports:
+      - "8100:8100"
+    networks:
+      - currency-network
+    depends_on:
+      - naming-server
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      EUREKA.INSTANCE.PREFERIPADDRESS: true
+      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
+
+networks:
+  currency-network:
